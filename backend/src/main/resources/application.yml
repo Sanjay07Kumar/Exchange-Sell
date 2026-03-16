@@ -1,41 +1,38 @@
 spring:
   application:
     name: excell
-
+  
   datasource:
     url: jdbc:postgresql://localhost:5432/excell
     username: postgres
-    password: user123
+    password: postgres123
     driver-class-name: org.postgresql.Driver
-
+  
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
     properties:
       hibernate:
-        # Using the correct modern Hibernate 6/Spring Boot 3 dialect.
         dialect: org.hibernate.dialect.PostgreSQLDialect
         jdbc:
           lob:
             non_contextual_creation: true
-
+  
   jackson:
     serialization:
       write-dates-as-timestamps: false
+      indent_output: true  # Moved this here
 
-# --- Custom/External Service Configurations ---
-# These are loaded by custom @ConfigurationProperties classes or explicitly using @Value.
-# They are intentionally left outside the 'spring' block to prevent namespace conflicts.
-
+# MinIO Configuration
 minio:
   endpoint: "http://localhost:9000"
   accessKey: "minioadmin"
   secretKey: "minioadmin"
   bucket: "marketplace-media"
 
+# JWT Configuration
 app:
   jwt:
-    # This secret is now securely long enough (min 32 characters/256 bits)
     secret: "THIS_IS_A_FALLBACK_SECRET_AND_IT_MUST_BE_32_BYTES"
-    expirationMs: 86400000
+    expirationMs: 86400000  # 24 hours in milliseconds

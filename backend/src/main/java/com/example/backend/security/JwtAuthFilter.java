@@ -8,7 +8,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-
 @Component
 public class JwtAuthFilter implements Filter {
 
@@ -26,26 +25,35 @@ public class JwtAuthFilter implements Filter {
 
         HttpServletRequest request = (HttpServletRequest) req;
 
+        // Extract JWT token if present
         String authHeader = request.getHeader("Authorization");
         String token = null;
         String username = null;
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             token = authHeader.substring(7);
-            username = jwtUtil.extractUsername(token);
+            try {
+                username = jwtUtil.extractUsername(token);
+            } catch (Exception e) {
+                // Invalid token, continue without authentication
+            }
         }
 
+        // If we have a valid username and no existing authentication, set it
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            try {
+                var userDetails = userDetailsService.loadUserByUsername(username);
 
-            var userDetails = userDetailsService.loadUserByUsername(username);
-
-            if (jwtUtil.validateToken(token)) {
-                var auth = new UsernamePasswordAuthenticationToken(
-                        userDetails,
-                        null,
-                        userDetails.getAuthorities()
-                );
-                SecurityContextHolder.getContext().setAuthentication(auth);
+                if (jwtUtil.validateToken(token)) {
+                    var auth = new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
+                    SecurityContextHolder.getContext().setAuthentication(auth);
+                }
+            } catch (Exception e) {
+                // Invalid user or token, continue without authentication
             }
         }
 

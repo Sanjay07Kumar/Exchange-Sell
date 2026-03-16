@@ -8,12 +8,14 @@ public class CategoryDTO {
     private Long id;
     private String name;
     private int productCount;
-
+    private String categoryImg;
     public CategoryDTO(Category category) {
         this.id = category.getId();
         this.name = category.getName();
         this.productCount = 
             category.getItems() == null ? 0 : category.getItems().size();
+
+        this.categoryImg = category.getCategoryImg();
     }
 
 }

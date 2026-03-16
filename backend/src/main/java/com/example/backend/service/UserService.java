@@ -10,17 +10,29 @@ import org.springframework.stereotype.Service;
 
 import com.example.backend.model.User;
 import com.example.backend.repository.UserRepo;
+import com.example.backend.security.JwtUtil;
 
 @Service
 public class UserService {
     @Autowired
     public UserRepo userRepo;
 
+    @Autowired
+    public JwtUtil jwtUtil;
+
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     
     public List<User> getallUsers() {
         return userRepo.findAll();
     }
+
+    public Optional<User> findById(Long id) {
+        if (id == null) {
+            return Optional.empty();
+        }
+        return userRepo.findById(id);
+    }
+
 
     public User findByEmail(String email) {
         return userRepo.findByEmail(email).orElse(null);
@@ -63,9 +75,12 @@ public class UserService {
 
         User userUpdate = userData.get();
 
-        // Update only if value provided
         if (user.getUsername() != null && !user.getUsername().isEmpty()) {
             userUpdate.setUsername(user.getUsername());
+        }
+
+        if (user.getEmail() != null && !user.getEmail().isEmpty()) {
+            userUpdate.setEmail(user.getEmail());
         }
 
         if (user.getPhone() != null && !user.getPhone().isEmpty()) {
@@ -96,4 +111,40 @@ public class UserService {
             return "Error: Failed to save user. Reason: " + err.getMessage();
         }
     }
+
+    public String deleteUser(Long id, String token) {
+
+    // 1. Check if user exists
+    Optional<User> optionalUser = userRepo.findById(id);
+    if (optionalUser.isEmpty()) {
+        return "Error: User not found.";
+    }
+
+    // 2. Extract logged-in email from JWT
+    String email;
+    try {
+        email = jwtUtil.extractUsername(token);
+    } catch (Exception e) {
+        return "Error: Invalid Token.";
+    }
+
+    User loggedIn = userRepo.findByEmail(email).orElse(null);
+    if (loggedIn == null) {
+        return "Error: Unauthorized. User not found from token.";
+    }
+
+    // 3. Prevent deleting other users
+    if (loggedIn.getId()!=id) {
+        return "Error: You are NOT allowed to delete another user's account.";
+    }
+
+    // 4. Delete the user
+    try {
+        userRepo.deleteById(id);
+        return "Success: User Deleted Successfully";
+    } catch (Exception e) {
+        return "Error: Failed to delete User. Reason: " + e.getMessage();
+    }
+}
+
 }

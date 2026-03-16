@@ -126,11 +126,20 @@
         <configuration>
           <source>${java.version}</source>
           <target>${java.version}</target>
+          <parameters>true</parameters>
         </configuration>
       </plugin>
       <plugin>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-maven-plugin</artifactId>
+            <version>3.3.4</version>
+            <executions>
+                <execution>
+                    <goals>
+                        <goal>repackage</goal>
+                    </goals>
+                </execution>
+            </executions>
         </plugin>
     </plugins>
   </build>

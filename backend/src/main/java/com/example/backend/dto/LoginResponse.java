@@ -10,12 +10,10 @@ import lombok.Getter;
 public class LoginResponse {
 
     private String token;
-
-    public LoginResponse(String token) {
+    private Long id;
+    public LoginResponse(Long id,String token) {
         this.token = token;
+        this.id=id;
     }
-
-    public String getToken() {
-        return token;
-    }
+    
 }

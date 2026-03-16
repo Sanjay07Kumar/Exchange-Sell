@@ -10,6 +10,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
@@ -34,16 +35,32 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
         http.csrf(csrf -> csrf.disable())
+            .cors(cors -> {})
             .authorizeHttpRequests(auth -> auth
-                // ALLOW PUBLIC ACCESS FOR REGISTRATION AND LOGIN
-            .requestMatchers("/user/register", "/user/login").permitAll()
-            .requestMatchers("/items/all").permitAll()
-            .requestMatchers("/categories/all**").permitAll()
-            // REQUIRE AUTHENTICATION FOR EVERYTHING ELSE
-            
-            .requestMatchers("/items/my-items").authenticated()
-            .requestMatchers("/user/all").authenticated() 
-            .anyRequest().authenticated()
+                // PUBLIC ENDPOINTS - explicitly allow
+                .requestMatchers("/user/login").permitAll()
+                .requestMatchers("/user/register").permitAll()
+                // GET requests for items and categories are public
+                .requestMatchers("GET", "/items/**").permitAll()
+                .requestMatchers("GET", "/categories/**").permitAll()
+                // Allow unauthenticated access to uploaded images and public static assets
+                .requestMatchers("GET", "/uploads/**").permitAll()
+                .requestMatchers("GET", "/placeholder.png").permitAll()
+                // POST/PUT/DELETE requests need authentication
+                .requestMatchers("POST", "/items/**").authenticated()
+                .requestMatchers("POST", "/wishlist/**").authenticated()
+                .requestMatchers("DELETE", "/wishlist/**").authenticated()
+                
+                .requestMatchers("GET", "/wishlist/**").authenticated()
+                .requestMatchers("PUT", "/items/**").authenticated()
+                .requestMatchers("DELETE", "/items/**").authenticated()
+                .requestMatchers("POST", "/categories/**").authenticated()
+                .requestMatchers("PUT", "/categories/**").authenticated()
+                .requestMatchers("DELETE", "/categories/**").authenticated()
+                .requestMatchers("GET", "/user/profile").authenticated()
+                .requestMatchers("PUT", "/user/update").authenticated()
+                // Everything else needs authentication
+                .anyRequest().authenticated()
             )
             .addFilterBefore(jwtAuthFilter(), UsernamePasswordAuthenticationFilter.class);
 

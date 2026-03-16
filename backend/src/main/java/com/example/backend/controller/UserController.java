@@ -1,11 +1,14 @@
 package com.example.backend.controller;
 
+import java.util.Optional;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -16,7 +19,10 @@ import com.example.backend.service.UserService;
 import org.springframework.web.bind.annotation.PutMapping;
 
 import com.example.backend.security.JwtUtil;
+
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 
 
 @RestController
@@ -72,7 +78,7 @@ public class UserController {
         String token = jwtUtil.generateToken(user.getEmail());
 
         // Return token + user info if needed
-        return ResponseEntity.ok(new LoginResponse(token));
+        return ResponseEntity.ok(new LoginResponse(user.getId(),token ));
 
     } catch (Exception e) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -96,6 +102,36 @@ public class UserController {
         }
         catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error : Unexpected failure - "+ e.getMessage());
+        }
+    }
+
+    @GetMapping("/profile/{id}")
+    public ResponseEntity<?> getProfile(@PathVariable Long id) {
+
+        Optional<User> userData = userService.findById(id);
+
+        if (userData.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body("User not found with id: " + id);
+        }
+
+        return ResponseEntity.ok(userData.get());
+    }
+    
+    @DeleteMapping("/delete/{id}")
+    public ResponseEntity<String> deleteUser(
+            @PathVariable Long id,
+            @RequestHeader("Authorization") String authHeader) {
+
+        // Extract token from "Bearer <token>"
+        String token = authHeader.replace("Bearer ", "");
+
+        String result = userService.deleteUser(id, token);
+
+        if (result.startsWith("Success")) {
+            return ResponseEntity.ok(result);
+        } else {
+            return ResponseEntity.badRequest().body(result);
         }
     }
 

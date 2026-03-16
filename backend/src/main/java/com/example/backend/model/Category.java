@@ -22,7 +22,9 @@ public class Category {
 
     @Column(unique = true, nullable = false)
     private String name;
-
+    
+    @Column(name="category_img" ,unique = true,nullable = false)
+    private String categoryImg;
     
 
     // One category can have many products/items

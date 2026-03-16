@@ -1,5 +1,7 @@
 package com.example.backend.model;
 
+import java.util.List;
+
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
 import jakarta.persistence.Entity;
@@ -35,15 +37,15 @@ private Category category;
     
     private Double price;
     private Boolean isNegotiable;
-    private String description;
-    private String imageUrl;
+    private List<String> imageUrls;
     private Boolean isAvailable;
-    private Boolean forExchange;;
+    private Boolean forExchange;
+    private String description;
     private String itemAge;
     private String condition;
 
 
-    @ManyToOne
+@ManyToOne
 @JoinColumn(name = "owner_id", nullable = false)
 @JsonIgnoreProperties("items")
 private User owner;

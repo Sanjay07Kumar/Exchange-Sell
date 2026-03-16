@@ -9,11 +9,10 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ItemRepo extends JpaRepository<Item,Long>{
-
-    public Optional<Item> findById(Long id);
-
-    public List<Item> findByOwnerId(Long ownerId);
-
-    public List<Item> findByCategoryName(String name);
+public interface ItemRepo extends JpaRepository<Item, Long> {
+    Optional<Item> findById(Long id);
+    List<Item> findByOwnerId(Long ownerId);
+    List<Item> findByOwnerIdNot(Long ownerId);
+    List<Item> findByCategoryName(String name);
+    List<Item> findByCategoryId(Long id);
 }
