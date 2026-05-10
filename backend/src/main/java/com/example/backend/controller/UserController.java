@@ -89,8 +89,17 @@ public class UserController {
     
 
     @PutMapping("/update")
-    public ResponseEntity<String> updateUser(@RequestBody User user) {
+    public ResponseEntity<String> updateUser(@RequestHeader("Authorization") String authHeader, @RequestBody User user) {
         try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body("Error: Missing or invalid Authorization header");
+            }
+            String token = authHeader.substring(7);
+            String email = jwtUtil.extractUsername(token);
+            if (!email.equals(user.getEmail())) {
+                return ResponseEntity.status(403).body("Error: You can only update your own profile");
+            }
+
             String result=userService.editUser(user);
              
             if(result.startsWith("Success")) {

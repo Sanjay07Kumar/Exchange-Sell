@@ -15,7 +15,7 @@ public class CorsConfig {
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
                     // Allow all localhost ports for development
-                    .allowedOrigins("http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "http://localhost:8080")
+                    .allowedOriginPatterns("http://localhost:*")
                     // 2. Allows all necessary HTTP methods (including OPTIONS for pre-flight).
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                     // 3. Allows all request headers, which is critical for sending the JWT in the 'Authorization' header.

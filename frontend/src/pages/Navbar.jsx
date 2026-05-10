@@ -1,29 +1,20 @@
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { CiShoppingCart } from "react-icons/ci";
 import { FaBox, FaFacebookMessenger, FaHeart, FaSearch, FaUser } from "react-icons/fa";
-
-import { useState,useEffect } from "react";
-import { LogOut} from "lucide-react";
-import { isTokenExpired, clearAuthData } from "../utils/tokenUtils";
+import { useState } from "react";
+import { LogOut, Plus } from "lucide-react";
+import { clearAuthData, getAuthToken } from "../utils/tokenUtils";
 import ChatSideBar from "./ChatSideBar";
 
 export default function Navbar() {
-
-  const hasToken = !!localStorage.getItem("Token");
-  const [showChat , setShowChat]= useState(false);
-  const isLoggedIn = hasToken && !isTokenExpired();
-  const location = useLocation();   // <-- correct way
-  const navigate = useNavigate();   // <-- to redirect to search results
-
-  // If token exists but is expired, clear it and redirect to login
-  useEffect(() => {
-    if (hasToken && isTokenExpired()) {
-      clearAuthData();
-      navigate("/login");
-    }
-  }, [hasToken, navigate]);
+  const [showChat, setShowChat] = useState(false);
+  const token = getAuthToken();
+  const isLoggedIn = !!token;
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const [query, setQuery] = useState("");
+
   if (location.pathname === "/login" || location.pathname === "/register") {
     return null;
   }
@@ -35,117 +26,134 @@ export default function Navbar() {
   };
 
   return (
-    <div className={"fixed top-0 w-full h-[60px] bg-white z-10"}>
-      <div className="max-w-6xl h-full mx-auto flex items-center gap-6">
+    <div className="fixed top-0 w-full h-[64px] bg-white border-b border-gray-200 z-50 shadow-sm">
+      <div className="max-w-6xl h-full mx-auto px-6 flex items-center gap-5">
 
-        <Link to="/" className="text-xl text-orange-400 font-bold italic">
+        {/* Logo */}
+        <Link
+          to="/"
+          className="text-xl font-black italic text-orange-500 tracking-tight flex-shrink-0"
+        >
           ExSell
         </Link>
 
-        <div className="flex flex-1 bg-gray-200 rounded-md items-center px-4 py-1">
+        {/* Search Bar */}
+        <div className="flex flex-1 items-center bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 gap-3 focus-within:border-orange-500 focus-within:ring-2 focus-within:ring-orange-100 transition-all">
+          <FaSearch
+            className="text-gray-400 flex-shrink-0 cursor-pointer hover:text-orange-500 transition-colors"
+            size={13}
+            onClick={() => navigate(`/search?q=${query}`)}
+          />
           <input
             type="text"
-            placeholder="Search for products, brands and more"
-            className="flex-1 outline-none bg-transparent text-black text-md"
+            placeholder="Search for products, brands and more..."
+            className="flex-1 outline-none bg-transparent text-sm text-gray-800 placeholder-gray-300"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleSearch}
           />
-          <FaSearch 
-            className="text-black opacity-60 cursor-pointer"
-            size={15}
-            onClick={() => navigate(`/search?q=${query}`)}
-          />
         </div>
 
-        <div className="relative cursor-pointer group">
-          {!isLoggedIn ?(
+        {/* Nav Actions */}
+        <div className="flex items-center gap-1">
+
+          {/* Cart */}
+          <Link
+            to="/cart"
+            className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-gray-600 hover:bg-orange-50 hover:text-orange-500 transition-all duration-200 group"
+          >
+            <CiShoppingCart size={22} />
+            <span className="text-[10px] font-bold tracking-wide uppercase">Cart</span>
+          </Link>
+
+          {/* Sell */}
+          <Link
+            to="/additem"
+            className="flex items-center gap-1.5 px-4 py-2 bg-gray-900 hover:bg-orange-500 text-white rounded-xl text-xs font-bold tracking-widest uppercase transition-all duration-200 ml-1"
+          >
+            <Plus size={13} />
+            Sell
+          </Link>
+
+          {/* Messenger */}
+          <button
+            onClick={() => setShowChat(true)}
+            className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-gray-600 hover:bg-orange-50 hover:text-orange-500 transition-all duration-200 hidden md:flex"
+          >
+            <FaFacebookMessenger size={19} />
+            <span className="text-[10px] font-bold tracking-wide uppercase">Chat</span>
+          </button>
+
+          {/* User */}
+          {!isLoggedIn ? (
             <Link
               to="/login"
-              className="bg-orange-400 text-md text-white px-6 py-1 rounded-md font-semibold hover:bg-orange-500"
+              className="ml-1 px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold tracking-widest uppercase rounded-xl transition-all duration-200"
             >
               Login
             </Link>
           ) : (
-
-          <div>
-            <FaUser size={30} className="border p-1 rounded-full"/>
-            <div 
-            className="absolute right-0 mt-2 w-40 bg-white shadow-lg rounded-md opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all duration-200">
-              
-              <Link 
-                to="/profile"
-                className="block flex text-xs gap-5 px-4 py-2 hover:bg-gray-100"
-              >
-                <FaUser size={15}/> My Profile
-              </Link>
-              
-              <Link 
-                to="/orders"
-                className="block flex text-xs gap-5 px-4 py-2 hover:bg-gray-100"
-              >
-                <FaBox size={13}/>Orders
-              </Link>
-
-              <button
-                onClick={() => {
-                  localStorage.setItem("activeTab", "wishlist");
-                  navigate("/profile");
-                }}
-                className="block w-full text-left flex text-xs gap-5 px-4 py-2 hover:bg-gray-100"
-              >
-                <FaHeart size={15}/>Wishlist
+            <div className="relative group ml-1">
+              <button className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl text-gray-600 hover:bg-orange-50 hover:text-orange-500 transition-all duration-200">
+                <FaUser size={18} />
+                <span className="text-[10px] font-bold tracking-wide uppercase">Account</span>
               </button>
 
-              <button 
-                onClick={() => {
-                  clearAuthData();
-                  navigate("/");
-                  window.location.reload();
-                }}
-                className="block w-full flex text-xs gap-5 px-4 py-2 hover:bg-red-500"
-              >
-                <LogOut size={15}/> Logout
-              </button>
+              {/* Dropdown */}
+              <div className="absolute right-0 mt-1 w-44 bg-white border border-gray-200 rounded-2xl shadow-lg overflow-hidden opacity-0 group-hover:opacity-100 invisible group-hover:visible transition-all duration-200 translate-y-1 group-hover:translate-y-0">
+
+                {/* Dropdown Header */}
+                <div className="bg-gray-900 px-4 py-2.5">
+                  <p className="text-[10px] font-bold tracking-[2px] uppercase text-orange-400">My Account</p>
+                </div>
+
+                <Link
+                  to="/profile"
+                  className="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-gray-700 hover:bg-orange-50 hover:text-orange-500 transition-colors"
+                >
+                  <FaUser size={12} className="text-gray-400" />
+                  My Profile
+                </Link>
+
+                <Link
+                  to="/orders"
+                  className="flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-gray-700 hover:bg-orange-50 hover:text-orange-500 transition-colors"
+                >
+                  <FaBox size={12} className="text-gray-400" />
+                  Orders
+                </Link>
+
+                <button
+                  onClick={() => {
+                    localStorage.setItem("activeTab", "wishlist");
+                    navigate("/profile");
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-gray-700 hover:bg-orange-50 hover:text-orange-500 transition-colors"
+                >
+                  <FaHeart size={12} className="text-gray-400" />
+                  Wishlist
+                </button>
+
+                <div className="h-px bg-gray-100" />
+
+                <button
+                  onClick={() => {
+                    clearAuthData();
+                    navigate("/");
+                    window.location.reload();
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 text-xs font-medium text-red-500 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut size={12} />
+                  Logout
+                </button>
+              </div>
             </div>
-          </div>
-
           )}
-
-      </div>
-      
-
-        
-
-        <Link
-          to="/cart"
-          className="flex items-center gap-1 text-sm font-semibold hover:underline"
-        >
-          <CiShoppingCart size={20} />
-          Cart
-        </Link>
-
-        <Link
-          to="/additem"
-          className="flex items-center gap-1 text-sm font-medium hover:underline"
-        >
-          <CiShoppingCart 
-          size={20}
-          
-           />
-          Sell
-        </Link>
-
-        <button
-          onClick={() => setShowChat(true)}
-          className="text-sm font-semibold hover:underline hidden md:block"
-        >
-          <FaFacebookMessenger size={20}/>
-        </button>
-
+        </div>
       </div>
 
-    {showChat && <ChatSideBar closeChat={() => setShowChat(false)} />}
+      {showChat && <ChatSideBar closeChat={() => setShowChat(false)} />}
     </div>
   );
 }

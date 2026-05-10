@@ -134,7 +134,7 @@ public class UserService {
     }
 
     // 3. Prevent deleting other users
-    if (loggedIn.getId()!=id) {
+    if (!loggedIn.getId().equals(id)) {
         return "Error: You are NOT allowed to delete another user's account.";
     }
 

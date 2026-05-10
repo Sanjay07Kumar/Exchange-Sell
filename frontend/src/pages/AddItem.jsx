@@ -1,41 +1,44 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
-import { Plus } from "lucide-react";
+import { Plus, ImagePlus, Tag, AlignLeft, Clock, Sparkles, ArrowRight } from "lucide-react";
 import { FaRupeeSign } from "react-icons/fa";
 import Footer from "./Footer";
-import { isTokenExpired, getAuthToken } from "../utils/tokenUtils";
+import { getAuthToken } from "../utils/tokenUtils";
 
 function AddItem() {
   const [categories, setCategories] = useState([]);
-  const [images, setImages] = useState(Array(6).fill(null)); // 6 image boxes initially
-  
- const isLoggedIn = !!localStorage.getItem("Token") && !isTokenExpired();
+  const [images, setImages] = useState(Array(6).fill(null));
+  const navigate = useNavigate();
+
+  const isLoggedIn = !!getAuthToken();
 
   const [form, setForm] = useState({
     name: "",
     categoryId: "",
     price: "",
     isNegotiable: false,
-    description: "",  
+    description: "",
     isAvailable: true,
     forExchange: false,
     itemAge: "",
     condition: "",
   });
 
-  // Load categories
   useEffect(() => {
+    if (!isLoggedIn) {
+      navigate("/login");
+      return;
+    }
     axios.get("http://localhost:8080/categories/all").then((res) => {
       setCategories(res.data);
     });
-  }, []);
+  }, [isLoggedIn, navigate]);
 
-  // Add extra blank image box
   const handleAddMoreBox = () => {
     setImages([...images, null]);
   };
 
-  // When user selects an image
   const handleImageChange = (file, index) => {
     const updated = [...images];
     updated[index] = {
@@ -49,39 +52,25 @@ function AddItem() {
     document.getElementById(`imageInput-${index}`).click();
   };
 
-  // Submit form + images
   const submitForm = async (e) => {
     e.preventDefault();
-
     try {
       const token = getAuthToken();
-      
       if (!token) {
         alert("Please login first!");
+        navigate("/login");
         return;
       }
-
       const formData = new FormData();
-
-      // Append text fields
       Object.entries(form).forEach(([key, value]) => {
         formData.append(key, value);
       });
-
-      // Append images
       images.forEach((img) => {
         if (img?.file) formData.append("images", img.file);
       });
-
-      const response = await axios.post("http://localhost:8080/items/add-items",
-        formData,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
-      );
-
+      await axios.post("http://localhost:8080/items/add-items", formData, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       alert("Item Added Successfully!");
       setForm({
         name: "",
@@ -101,180 +90,274 @@ function AddItem() {
     }
   };
 
-  if(!isLoggedIn) return null;
+  if (!isLoggedIn)
+    return (
+      <p className="text-center mt-20 text-xl font-semibold text-gray-700">
+        Redirecting to login...
+      </p>
+    );
 
   return (
-    <div className="w-full mt-[70px] mx-auto">
+    <div className="w-full min-h-screen bg-gray-50 mt-[70px]">
 
-      <h1 className="text-4xl font-extrabold text-center mb-6 tracking-wide">
-        Post an Item
-      </h1>
-    <div className="flex">
-      <div className="flex flex-col md:flex-row mx-auto p-10 gap-10">
+      {/* ── Header ── */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-6 py-8 flex items-end justify-between">
+          <div>
+            <p className="text-xs font-bold tracking-[4px] uppercase text-orange-500 mb-1">
+              Marketplace
+            </p>
+            <h1 className="text-4xl font-black text-gray-900 tracking-tight">
+              Post an <span className="text-orange-500">Item</span>
+            </h1>
+          </div>
+          <p className="text-sm text-gray-400 mb-1 hidden md:block">
+            Fill in the details below to list your item
+          </p>
+        </div>
+      </div>
 
-      <div className="bg-white w-[500px]">
-        <h2 className="text-xl font-bold mb-3 p-5 ">Upload Product Images</h2>
+      {/* ── Body ── */}
+      <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col lg:flex-row gap-8 items-start">
 
-        <div className="grid grid-cols-3 gap-3 p-5 ">
-          {images.map((img, index) => (
-            <div
-              key={index}
-              onClick={() => openFilePicker(index)}
-              className="w-36 h-36 border-2 border-dashed  border-gray-500 rounded-xl flex items-center justify-center cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition relative"
-            >
-              <input
-                id={`imageInput-${index}`}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={(e) => handleImageChange(e.target.files[0], index)}
-              />
+        {/* ── LEFT: Image Upload Panel ── */}
+        <div className="w-full lg:w-[400px] bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm flex-shrink-0">
 
-              {img ? (
-                <img
-                  src={img.preview}
-                  className="w-full h-full rounded-xl object-cover"
-                  alt="preview"
+          {/* Panel Header */}
+          <div className="bg-gray-900 px-5 py-4 flex items-center gap-3">
+            <ImagePlus size={16} className="text-orange-400" />
+            <span className="text-xs font-bold tracking-[3px] uppercase text-white">
+              Product Images
+            </span>
+          </div>
+
+          {/* Image Grid */}
+          <div className="grid grid-cols-3 gap-3 p-5">
+            {images.map((img, index) => (
+              <div
+                key={index}
+                onClick={() => openFilePicker(index)}
+                className="aspect-square border-2 border-dashed border-gray-300 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition-all duration-200 relative overflow-hidden group"
+              >
+                <input
+                  id={`imageInput-${index}`}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handleImageChange(e.target.files[0], index)}
                 />
-              ) : (
-                <div className="flex flex-col items-center text-orange-500 hover:text-orange-500">
-                  <Plus size={34} />
-                  <p className="text-xs mt-1">Upload</p>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-        <button
-          className="mt-3 p-3 ml-5 mx-auto bg-orange-500 font-semibold text-white rounded-lg hover:bg-orange-600 shadow-md"
-          onClick={handleAddMoreBox}
-        >
-          + Add More Images
-        </button>
-
-      </div>
-      
-      <div className="bg-white w-[700px] p-5">
-        {/* FORM SECTION */}
-        <form onSubmit={submitForm} className="mt-8 space-y-4">
-
-        <div className="flex gap-10"> 
-          <div>
-            <h2 className="font-bold text-gray-800 mb-2">
-              Item Name :
-            </h2>
-            <input
-            type="text"
-            placeholder="Item Name"
-            onChange={(e) => setForm({ ...form, name: e.target.value })}
-            className="w-full border p-3 rounded-lg shadow-sm"
-          />
-          </div>
-          
-          <div>
-            <h2 className="font-bold text-gray-800 mb-2">
-              Choose Category :
-            </h2>
-            <select
-            className="w-full border p-3 rounded-lg shadow-sm"
-            onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
-          >
-            <option>Select Category</option>
-            {categories.map((c) => (
-              <option value={c.id} key={c.id}>{c.name}</option>
+                {img ? (
+                  <img
+                    src={img.preview}
+                    className="w-full h-full object-cover rounded-xl"
+                    alt="preview"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-1 text-gray-300 group-hover:text-orange-500 transition-colors duration-200">
+                    <Plus size={28} strokeWidth={1.5} />
+                    <span className="text-[10px] font-semibold tracking-widest uppercase">
+                      Upload
+                    </span>
+                  </div>
+                )}
+              </div>
             ))}
-          </select>
           </div>
-        
+
+          {/* Add More Button */}
+          <div className="px-5 pb-5">
+            <button
+              onClick={handleAddMoreBox}
+              className="w-full py-3 border-2 border-gray-900 rounded-xl text-gray-900 text-sm font-bold tracking-wide hover:bg-gray-900 hover:text-orange-400 transition-all duration-200 flex items-center justify-center gap-2"
+            >
+              <Plus size={15} />
+              Add More Images
+            </button>
+          </div>
         </div>
-          
-          <div>
-            <h2 className="flex font-bold text-gray-800 mb-2">
-              <FaRupeeSign/>Price :
-            </h2>
-            <input
-            type="number"
-            placeholder="Price"
-            className="w-fit border p-3 rounded-lg shadow-sm"
-            onChange={(e) => setForm({ ...form, price: e.target.value })}
-          />
-          </div>
-          
-          <div>
-            <h2 className="font-bold text-gray-800 mb-2">
-              Description :
-            </h2>
-            <textarea
-            placeholder="e.g.  It is a bit old. But it works well and not damaged."
-            className="w-full border p-3 rounded-lg shadow-sm"
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
-          </div>
-          
-          <div>
-            <h2 className="font-bold text-gray-800 mb-2">
-              Item age :
-            </h2>
-            <input
-            type="text"
-            placeholder="(e.g. 6 months)"
-            className="w-fit border p-3 rounded-lg shadow-sm"
-            onChange={(e) => setForm({ ...form, itemAge: e.target.value })}
-          />
+
+        {/* ── RIGHT: Form Panel ── */}
+        <div className="flex-1 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
+
+          {/* Panel Header */}
+          <div className="bg-orange-500 px-6 py-4 flex items-center gap-3">
+            <Sparkles size={16} className="text-white" />
+            <span className="text-xs font-bold tracking-[3px] uppercase text-white">
+              Item Details
+            </span>
           </div>
 
+          <form onSubmit={submitForm} className="p-6 space-y-6">
 
-          <div>
-            <h2 className="font-bold text-gray-800 mb-2">
-              Condition :
-            </h2>
-            <input
-            type="text"
-            placeholder="e.g. (New / Good / Used)"
-            className="border w-fit p-3 rounded-lg shadow-sm"
-            onChange={(e) => setForm({ ...form, condition: e.target.value })}
-          />
-          </div>
+            {/* Row: Name + Category */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-[11px] font-bold tracking-[2px] uppercase text-gray-800">
+                  <Tag size={12} className="text-orange-500" />
+                  Item Name
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Sony Headphones"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-300 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all"
+                />
+              </div>
 
-          <div>
-            <h2 className="font-bold text-gray-800 mb-2">
-              Let others negotiate with you?
-            </h2>
-              <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                onChange={(e) => setForm({ ...form, isNegotiable: e.target.checked })}
-                className=""
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-[11px] font-bold tracking-[2px] uppercase text-gray-800">
+                  <Tag size={12} className="text-orange-500" />
+                  Category
+                </label>
+                <select
+                  value={form.categoryId}
+                  onChange={(e) => setForm({ ...form, categoryId: e.target.value })}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all cursor-pointer"
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((c) => (
+                    <option value={c.id} key={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="h-px bg-gray-100" />
+
+            {/* Row: Price + Item Age + Condition */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-1.5 text-[11px] font-bold tracking-[2px] uppercase text-gray-800">
+                  <FaRupeeSign className="text-orange-500 text-xs" />
+                  Price
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">₹</span>
+                  <input
+                    type="number"
+                    placeholder="0.00"
+                    value={form.price}
+                    onChange={(e) => setForm({ ...form, price: e.target.value })}
+                    className="w-full bg-gray-50 border border-gray-200 rounded-xl pl-8 pr-4 py-3 text-sm text-gray-800 placeholder-gray-300 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-[11px] font-bold tracking-[2px] uppercase text-gray-800">
+                  <Clock size={12} className="text-orange-500" />
+                  Item Age
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. 6 months"
+                  value={form.itemAge}
+                  onChange={(e) => setForm({ ...form, itemAge: e.target.value })}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-300 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-[11px] font-bold tracking-[2px] uppercase text-gray-800">
+                  <Sparkles size={12} className="text-orange-500" />
+                  Condition
+                </label>
+                <input
+                  type="text"
+                  placeholder="New / Good / Used"
+                  value={form.condition}
+                  onChange={(e) => setForm({ ...form, condition: e.target.value })}
+                  className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-300 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all"
+                />
+              </div>
+            </div>
+
+            <div className="h-px bg-gray-100" />
+
+            {/* Description */}
+            <div className="flex flex-col gap-2">
+              <label className="flex items-center gap-2 text-[11px] font-bold tracking-[2px] uppercase text-gray-800">
+                <AlignLeft size={12} className="text-orange-500" />
+                Description
+              </label>
+              <textarea
+                placeholder="e.g. It is a bit old but works perfectly fine, no damage at all..."
+                value={form.description}
+                rows={4}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-300 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all resize-none"
               />
-              Negotiable
-            </label>
-          </div>
+            </div>
 
+            <div className="h-px bg-gray-100" />
 
-          <div>
-            <h2 className="font-bold text-gray-800 mb-2">
-              Want to able to exchange this for others products?
-            </h2>
-            <label className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                onChange={(e) => setForm({ ...form, forExchange: e.target.checked })}
-              />
-              Available For Exchange
-            </label>
-          </div>
-          
+            {/* Toggle Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
+              {/* Negotiable Toggle */}
+              <label
+                className={`flex items-center justify-between px-5 py-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                  form.isNegotiable
+                    ? "border-orange-500 bg-orange-50"
+                    : "border-gray-200 bg-gray-50 hover:border-orange-300 hover:bg-orange-50/40"
+                }`}
+              >
+                <div>
+                  <p className="text-sm font-bold text-gray-900">Negotiable</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Allow buyers to bargain</p>
+                </div>
+                <div className="relative w-11 h-6">
+                  <input
+                    type="checkbox"
+                    checked={form.isNegotiable}
+                    onChange={(e) => setForm({ ...form, isNegotiable: e.target.checked })}
+                    className="sr-only"
+                  />
+                  <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${form.isNegotiable ? "bg-orange-500" : "bg-gray-300"}`} />
+                  <div className={`w-5 h-5 bg-white rounded-full shadow absolute top-0.5 transition-transform duration-200 ${form.isNegotiable ? "translate-x-5" : "translate-x-0.5"}`} />
+                </div>
+              </label>
 
-          <button className="w-fit bg-orange-500 font-semibold mx-auto text-white px-6 py-3 rounded-lg text-lg mt-4 hover:bg-orange-600 shadow-lg">
-            Add Item
-          </button>
-        </form>
+              {/* Exchange Toggle */}
+              <label
+                className={`flex items-center justify-between px-5 py-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
+                  form.forExchange
+                    ? "border-orange-500 bg-orange-50"
+                    : "border-gray-200 bg-gray-50 hover:border-orange-300 hover:bg-orange-50/40"
+                }`}
+              >
+                <div>
+                  <p className="text-sm font-bold text-gray-900">Open to Exchange</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Swap with other products</p>
+                </div>
+                <div className="relative w-11 h-6">
+                  <input
+                    type="checkbox"
+                    checked={form.forExchange}
+                    onChange={(e) => setForm({ ...form, forExchange: e.target.checked })}
+                    className="sr-only"
+                  />
+                  <div className={`w-11 h-6 rounded-full transition-colors duration-200 ${form.forExchange ? "bg-orange-500" : "bg-gray-300"}`} />
+                  <div className={`w-5 h-5 bg-white rounded-full shadow absolute top-0.5 transition-transform duration-200 ${form.forExchange ? "translate-x-5" : "translate-x-0.5"}`} />
+                </div>
+              </label>
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              className="w-full bg-gray-900 hover:bg-orange-500 text-white font-bold py-4 rounded-xl text-sm tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2 group shadow-md mt-2"
+            >
+              Post Item
+              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform duration-200" />
+            </button>
+
+          </form>
+        </div>
       </div>
-      
-      </div>
-      </div>
-      <Footer/>
+
+      <Footer />
     </div>
   );
 }

@@ -3,6 +3,7 @@ package com.example.backend.security;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -37,28 +38,32 @@ public class SecurityConfig {
         http.csrf(csrf -> csrf.disable())
             .cors(cors -> {})
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 // PUBLIC ENDPOINTS - explicitly allow
                 .requestMatchers("/user/login").permitAll()
                 .requestMatchers("/user/register").permitAll()
                 // GET requests for items and categories are public
-                .requestMatchers("GET", "/items/**").permitAll()
-                .requestMatchers("GET", "/categories/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/items/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/categories/**").permitAll()
                 // Allow unauthenticated access to uploaded images and public static assets
-                .requestMatchers("GET", "/uploads/**").permitAll()
-                .requestMatchers("GET", "/placeholder.png").permitAll()
+                .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/placeholder.png").permitAll()
+                .requestMatchers("/").permitAll()
+                .requestMatchers("/error").permitAll()
+                .requestMatchers("/ws/**").permitAll()
                 // POST/PUT/DELETE requests need authentication
-                .requestMatchers("POST", "/items/**").authenticated()
-                .requestMatchers("POST", "/wishlist/**").authenticated()
-                .requestMatchers("DELETE", "/wishlist/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/items/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/wishlist/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/wishlist/**").authenticated()
                 
-                .requestMatchers("GET", "/wishlist/**").authenticated()
-                .requestMatchers("PUT", "/items/**").authenticated()
-                .requestMatchers("DELETE", "/items/**").authenticated()
-                .requestMatchers("POST", "/categories/**").authenticated()
-                .requestMatchers("PUT", "/categories/**").authenticated()
-                .requestMatchers("DELETE", "/categories/**").authenticated()
-                .requestMatchers("GET", "/user/profile").authenticated()
-                .requestMatchers("PUT", "/user/update").authenticated()
+                .requestMatchers(HttpMethod.GET, "/wishlist/**").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/items/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/items/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/categories/**").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/categories/**").authenticated()
+                .requestMatchers(HttpMethod.DELETE, "/categories/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/user/profile").authenticated()
+                .requestMatchers(HttpMethod.PUT, "/user/update").authenticated()
                 // Everything else needs authentication
                 .anyRequest().authenticated()
             )

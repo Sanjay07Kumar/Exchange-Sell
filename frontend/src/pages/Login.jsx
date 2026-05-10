@@ -1,7 +1,7 @@
 import React from 'react';
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { saveTokenWithExpiration } from '../utils/tokenUtils';
+import { saveAuthToken } from '../utils/tokenUtils';
 
 export default function Login() {
 
@@ -41,16 +41,28 @@ export default function Login() {
                 body: JSON.stringify({email,password}),
             });
 
-            const text=await response.text();
+            const text = await response.text();
 
-            if(!response.ok) {
-                setError(text);
+            if (!response.ok) {
+                setError(text || "Login failed. Please check your credentials.");
                 return;
             }
 
-            const data =JSON.parse(text);
-            saveTokenWithExpiration(data.token, data.id);
-            navigate("/");
+            let data;
+            try {
+                data = JSON.parse(text);
+            } catch (parseError) {
+                setError("Login failed: invalid server response.");
+                return;
+            }
+
+            if (!data?.token) {
+                setError("Login failed: missing token from server.");
+                return;
+            }
+
+            saveAuthToken(data.token, data.id);
+            navigate("/", { replace: true });
 
         } catch(err) {
             setError("Failed to Login. Please try again later.");

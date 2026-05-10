@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Footer from "./Footer";
-import { getAuthToken } from "../utils/tokenUtils";
+import { clearAuthData, getAuthToken } from "../utils/tokenUtils";
+import { Plus, ArrowRight, Tag } from "lucide-react";
 
 export default function MainPage() {
   const [recentItems, setRecentItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAllItems, setShowAllItems] = useState(false); // Track if showing all items
+  const [showAllItems, setShowAllItems] = useState(false);
   const [token, setToken] = useState(() => getAuthToken());
 
   const navigate = useNavigate();
@@ -16,53 +17,42 @@ export default function MainPage() {
     let cancelled = false;
     async function loadData() {
       try {
-        // Always fetch categories
         const categoriesRes = await fetch("http://localhost:8080/categories/all");
         if (cancelled) return;
         setCategories(await categoriesRes.json());
 
-        // If no token, show ALL items
         if (!token) {
-          console.log("No token found, showing ALL items");
           const itemsRes = await fetch("http://localhost:8080/items/all");
           const allItems = await itemsRes.json();
           if (cancelled) return;
           setRecentItems(allItems);
-          setShowAllItems(true); // Mark that we're showing all items
+          setShowAllItems(true);
           return;
         }
 
-        // Try to fetch "others-items" with token
         try {
           const itemsRes = await fetch("http://localhost:8080/items/others-items", {
             headers: {
-              "Authorization": `Bearer ${token}`,
+              Authorization: `Bearer ${token}`,
               "Content-Type": "application/json",
-              "Accept": "application/json"
-            }
+              Accept: "application/json",
+            },
           });
 
           if (itemsRes.ok) {
             const othersItems = await itemsRes.json();
             if (cancelled) return;
             setRecentItems(othersItems);
-            setShowAllItems(false); // Showing only others' items
-            console.log(`Showing ${othersItems.length} items from others`);
+            setShowAllItems(false);
           } else if (itemsRes.status === 401) {
-            // Token is invalid/expired
-            console.log("Token invalid/expired, clearing and showing ALL items");
-            localStorage.removeItem("Token");
-            sessionStorage.removeItem("Token");
+            clearAuthData();
             setToken(null);
-            // Fetch all items
             const fallbackRes = await fetch("http://localhost:8080/items/all");
             const allItems = await fallbackRes.json();
             if (cancelled) return;
             setRecentItems(allItems);
-            setShowAllItems(true); // Showing all items
+            setShowAllItems(true);
           } else {
-            // Other error, fallback to all items
-            console.log("Other error, falling back to ALL items");
             const fallbackRes = await fetch("http://localhost:8080/items/all");
             const allItems = await fallbackRes.json();
             if (cancelled) return;
@@ -70,18 +60,13 @@ export default function MainPage() {
             setShowAllItems(true);
           }
         } catch (fetchError) {
-          console.error("Error fetching others-items:", fetchError);
-          // Fallback to all items
           const fallbackRes = await fetch("http://localhost:8080/items/all");
           const allItems = await fallbackRes.json();
           if (cancelled) return;
           setRecentItems(allItems);
           setShowAllItems(true);
         }
-
       } catch (err) {
-        console.error("Error fetching data:", err);
-        // Last resort: try to get all items
         try {
           const fallbackRes = await fetch("http://localhost:8080/items/all");
           const allItems = await fallbackRes.json();
@@ -97,102 +82,144 @@ export default function MainPage() {
     }
     setLoading(true);
     loadData();
-
     return () => { cancelled = true; };
   }, [token]);
 
-  // Poll for token changes (covers login/logout in same tab)
   useEffect(() => {
     const id = setInterval(() => {
-      const current = localStorage.getItem("Token") || sessionStorage.getItem("Token");
-      if ((current || null) !== token) {
-        setToken(current);
-      }
+      const current = getAuthToken();
+      if (current !== token) setToken(current);
     }, 500);
-    // Also update token if storage changes from other tabs
     function onStorage(e) {
-      if (e.key === 'Token') setToken(e.newValue);
+      if (e.key === "Token") setToken(e.newValue);
     }
-    window.addEventListener('storage', onStorage);
-    return () => { clearInterval(id); window.removeEventListener('storage', onStorage); };
+    window.addEventListener("storage", onStorage);
+    return () => { clearInterval(id); window.removeEventListener("storage", onStorage); };
   }, [token]);
 
   if (loading) {
     return (
-      <p className="text-center mt-20 text-xl font-semibold">
-        Loading...
-      </p>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm font-bold tracking-widest uppercase text-gray-400">Loading...</p>
+        </div>
+      </div>
     );
   }
 
   return (
-    <div className="w-full bg-gray-100 min-h-screen">
-      <div className="w-[95%] mt-[70px] mx-auto bg-white p-5 shadow-md">
-        <div className="flex flex-wrap justify-center gap-10">
-          {categories.map((cat) => (
-            <div
-              key={cat.id}
-              onClick={() => navigate(`/items/category/${cat.id}`)}
-              className="flex flex-col items-center cursor-pointer hover:scale-105 transition-transform"
-            >
-              <img
-                src={cat.categoryImg}
-                alt={cat.name}
-                className="w-14 h-14 object-contain"
-              />
-              <p className="text-xs font-semibold">{cat.name}</p>
-              <p className="text-xs text-gray-700">{cat.productCount} products</p>
-            </div>
-          ))}
+    <div className="w-full bg-gray-50 min-h-screen mt-[64px]">
+
+      {/* ── Categories Strip ── */}
+      <div className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-6 py-5">
+
+          {/* Strip Header */}
+          <div className="flex items-center gap-2 mb-4">
+            <Tag size={13} className="text-orange-500" />
+            <span className="text-[11px] font-bold tracking-[3px] uppercase text-gray-800">
+              Browse Categories
+            </span>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-3">
+            {categories.map((cat) => (
+              <div
+                key={cat.id}
+                onClick={() => navigate(`/items/category/${cat.id}`)}
+                className="flex flex-col items-center gap-1.5 w-20 py-3 bg-gray-50 border border-gray-200 rounded-xl cursor-pointer hover:border-orange-500 hover:bg-orange-50 transition-all duration-200 group"
+              >
+                <div className="w-16 h-10 flex items-center justify-center">
+                  <img
+                    src={cat.categoryImg}
+                    alt={cat.name}
+                    className="w-10 h-10 object-cover group-hover:scale-110 transition-transform duration-200"
+                  />
+                </div>
+                <p className="text-[12px] font-bold text-gray-700 group-hover:text-orange-500 transition-colors text-center leading-tight px-1">
+                  {cat.name}
+                </p>
+                <p className="text-[10px] text-gray-400">{cat.productCount} items</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="max-w-8xl mx-auto mt-10 px-4">
-        {/* Dynamic heading based on what we're showing */}
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold">
-            {showAllItems ? "Recently Posted Items" : "Recently Posted by Others"}
-          </h2>
-          
+      {/* ── Items Section ── */}
+      <div className="max-w-6xl mx-auto px-6 py-8">
+
+        {/* Section Header */}
+        <div className="flex items-end justify-between mb-6">
+          <div>
+            <p className="text-[11px] font-bold tracking-[3px] uppercase text-orange-500 mb-1">
+              Marketplace
+            </p>
+            <h2 className="text-2xl font-black text-gray-900 tracking-tight">
+              {showAllItems ? "Recently Posted Items" : "Recently Posted by Others"}
+            </h2>
+          </div>
+
           {showAllItems && (
-            <div className="text-sm text-blue-600 bg-blue-100 px-3 py-1 rounded">
-              Showing all items - <a href="/login" className="underline">Login</a> to see only others' items
+            <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-xs text-gray-600">
+              <span>Showing all items —</span>
+              <a
+                href="/login"
+                className="font-bold text-orange-500 hover:underline"
+              >
+                Login
+              </a>
+              <span>to personalize</span>
             </div>
           )}
         </div>
-        
+
+        {/* Empty State */}
         {recentItems.length === 0 ? (
-          <div className="text-center py-10">
-            <p className="text-gray-500 text-lg">
-              {showAllItems ? "No items posted yet." : "No items posted by others yet."}
+          <div className="flex flex-col items-center justify-center py-24 bg-white border border-gray-200 rounded-2xl">
+            <div className="w-16 h-16 bg-orange-50 rounded-2xl flex items-center justify-center mb-4">
+              <Plus size={28} className="text-orange-500" />
+            </div>
+            <p className="text-gray-900 font-bold text-lg mb-1">No items yet</p>
+            <p className="text-gray-400 text-sm mb-6">
+              {showAllItems ? "Be the first to post something!" : "No items posted by others yet."}
             </p>
-            <button 
-              onClick={() => navigate("/add-items")}
-              className="mt-4 bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600"
+            <button
+              onClick={() => navigate("/addItem")}
+              className="flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-orange-500 text-white text-xs font-bold tracking-widest uppercase rounded-xl transition-all duration-200 group"
             >
-              Be the first to post!
+              <Plus size={14} />
+              Post an Item
+              <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform duration-200" />
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          /* Items Grid */
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {recentItems.map((item) => (
               <div
                 key={item.id}
-                className="shadow p-3 overflow-hidden hover:scale-105 transition-transform cursor-pointer bg-white"
+                onClick={() => navigate(`/items/${item.id}`)}
+                className="bg-white border p-2 border-gray-200 overflow-hidden cursor-pointer hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group"
               >
-                <img
-                  src={
-                    item.imageUrls && item.imageUrls.length > 0
-                      ? `http://localhost:8080${item.imageUrls[0]}`
-                      : "/placeholder.png"
-                  }
-                  onClick={() => navigate(`/items/${item.id}`)}
-                  alt={item.title || item.name}
-                  className="w-full h-20 md:h-40 lg:h-40 object-contain"
-                />
-                <div className="p-2">
-                  <p className="font-semibold text-center text-sm truncate">{item.name}</p>
-                  <p className="text-gray-600 text-center text-sm">₹{item.price}</p>
+                {/* Image */}
+                <div className="aspect-square bg-gray-50 overflow-hidden">
+                  <img
+                    src={
+                      item.imageUrls && item.imageUrls.length > 0
+                        ? item.imageUrls[0]
+                        : "/placeholder.png"
+                    }
+                    alt={item.title || item.name}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+
+                {/* Info */}
+                <div className="px-3 py-2.5">
+                  <p className="text-sm font-bold text-gray-800 truncate">{item.name}</p>
+                  <p className="text-xs font-black text-orange-500 mt-0.5">₹{item.price}</p>
                 </div>
               </div>
             ))}

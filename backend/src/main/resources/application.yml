@@ -1,9 +1,9 @@
 spring:
   application:
-    name: excell
+    name: exsell
   
   datasource:
-    url: jdbc:postgresql://localhost:5432/excell
+    url: jdbc:postgresql://localhost:5432/exsell
     username: postgres
     password: postgres123
     driver-class-name: org.postgresql.Driver

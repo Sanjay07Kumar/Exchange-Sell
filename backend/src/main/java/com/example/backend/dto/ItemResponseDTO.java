@@ -26,6 +26,7 @@ public class ItemResponseDTO {
     private Boolean forExchange;
     private String itemAge;
     private String condition;
+    private String status;
 
 
 
@@ -42,6 +43,7 @@ public class ItemResponseDTO {
     this.forExchange = item.getForExchange();
     this.itemAge = item.getItemAge();
     this.condition = item.getCondition();
+    this.status = item.getStatus() != null ? item.getStatus().toString() : "ACTIVE";
 }
 
    

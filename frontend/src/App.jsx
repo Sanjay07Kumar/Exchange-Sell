@@ -10,6 +10,8 @@ import AddItem from "./pages/addItem.jsx";
 import Profile from "./pages/Profile.jsx";
 import Cart from "./pages/Cart.jsx";
 import Search from "./pages/Search.jsx";
+import ChatPage from "./pages/ChatPage.jsx";
+import Messages from "./pages/Messages.jsx";
 // wishlist page removed; wishlist shown inside profile
 
 export default function App() {
@@ -30,6 +32,8 @@ export default function App() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/cart" element={<Cart />} />
         <Route path="/search" element={<Search />} />
+        <Route path="/chat" element={<Messages />} />
+        <Route path="/chat/room/:roomId" element={<ChatPage />} />
         {/* wishlist route removed; profile handles wishlist */}
       </Routes>
     </BrowserRouter>

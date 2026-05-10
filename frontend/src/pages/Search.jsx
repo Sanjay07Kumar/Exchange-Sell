@@ -57,7 +57,7 @@ export default function Search() {
           {items.map((it) => (
             <div key={it.id} className="bg-white p-3 rounded shadow cursor-pointer" onClick={() => navigate(`/items/${it.id}`)}>
               <img
-                src={it.imageUrls && it.imageUrls.length > 0 ? `http://localhost:8080${it.imageUrls[0]}` : "/placeholder.png"}
+                src={it.imageUrls && it.imageUrls.length > 0 ? it.imageUrls[0] : "/placeholder.png"}
                 alt={it.name}
                 className="w-full h-44 object-contain bg-gray-100 rounded"
               />

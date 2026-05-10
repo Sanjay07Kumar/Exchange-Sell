@@ -193,9 +193,18 @@ public class ItemController {
     @PutMapping("/update-item/{id}/owner/{ownerId}")
     public ResponseEntity<?> updateItem(@PathVariable Long id,
                                         @PathVariable Long ownerId,
+                                        @RequestHeader("Authorization") String authHeader,
                                         @RequestBody Item item) {
         try {
-            String result = itemService.updateItem(id, ownerId, item);
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body("Error: Missing or invalid Authorization header");
+            }
+            String token = authHeader.substring(7);
+            String email = jwtUtil.extractUsername(token);
+            User currentUser = userService.findByEmail(email);
+            if (currentUser == null) return ResponseEntity.status(400).body("Error: Invalid Token User");
+
+            String result = itemService.updateItem(id, currentUser.getId(), item);
             if (result.startsWith("Success")) return ResponseEntity.ok(result);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(result);
         } catch (Exception e) {
@@ -205,9 +214,19 @@ public class ItemController {
 
     // Delete item
     @DeleteMapping("/delete-item/{id}/owner/{ownerId}")
-    public ResponseEntity<?> deleteItem(@PathVariable Long id, @PathVariable Long ownerId) {
+    public ResponseEntity<?> deleteItem(@PathVariable Long id, 
+                                        @PathVariable Long ownerId,
+                                        @RequestHeader("Authorization") String authHeader) {
         try {
-            String result = itemService.removeItem(id, ownerId);
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body("Error: Missing or invalid Authorization header");
+            }
+            String token = authHeader.substring(7);
+            String email = jwtUtil.extractUsername(token);
+            User currentUser = userService.findByEmail(email);
+            if (currentUser == null) return ResponseEntity.status(400).body("Error: Invalid Token User");
+
+            String result = itemService.removeItem(id, currentUser.getId());
             if (result.startsWith("Success")) return ResponseEntity.ok(result);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(result);
         } catch (Exception e) {
@@ -236,6 +255,64 @@ public class ItemController {
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("Error fetching items for category ID " + id + ": " + e.getMessage());
+        }
+    }
+
+    // Mark item as sold out
+    @PutMapping("/mark-sold/{id}")
+    public ResponseEntity<?> markItemAsSoldOut(@PathVariable Long id,
+                                               @RequestHeader("Authorization") String authHeader) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body("Error: Missing or invalid Authorization header");
+            }
+            String token = authHeader.substring(7);
+            String email = jwtUtil.extractUsername(token);
+            User currentUser = userService.findByEmail(email);
+            if (currentUser == null) return ResponseEntity.status(400).body("Error: Invalid Token User");
+
+            String result = itemService.markItemAsSoldOut(id, currentUser.getId());
+            if (result.startsWith("Success")) return ResponseEntity.ok(result);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error marking item as sold: " + e.getMessage());
+        }
+    }
+
+    // Mark item as active (undo sold out)
+    @PutMapping("/mark-active/{id}")
+    public ResponseEntity<?> markItemAsActive(@PathVariable Long id,
+                                              @RequestHeader("Authorization") String authHeader) {
+        try {
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                return ResponseEntity.status(401).body("Error: Missing or invalid Authorization header");
+            }
+            String token = authHeader.substring(7);
+            String email = jwtUtil.extractUsername(token);
+            User currentUser = userService.findByEmail(email);
+            if (currentUser == null) return ResponseEntity.status(400).body("Error: Invalid Token User");
+
+            String result = itemService.markItemAsActive(id, currentUser.getId());
+            if (result.startsWith("Success")) return ResponseEntity.ok(result);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(result);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error marking item as active: " + e.getMessage());
+        }
+    }
+
+    // Get my sold items
+    @GetMapping("/my-sold-items")
+    public ResponseEntity<?> getMySoldItems(Principal principal) {
+        try {
+            User owner = userService.findByEmail(principal.getName());
+            if (owner == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body("Error: Authenticated user not found.");
+
+            List<ItemResponseDTO> soldItems = itemService.getMySoldItems(owner.getId());
+            return ResponseEntity.ok(soldItems);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Error fetching sold items: " + e.getMessage());
         }
     }
 }

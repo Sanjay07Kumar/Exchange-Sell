@@ -43,6 +43,9 @@ private Category category;
     private String description;
     private String itemAge;
     private String condition;
+    
+    @jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+    private ItemStatus status = ItemStatus.ACTIVE;
 
 
 @ManyToOne

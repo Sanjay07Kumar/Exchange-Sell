@@ -39,7 +39,14 @@ public class WishlistService {
         return wishlistRepository.findByUser(user);
     }
 
-    public void removeFromWishlist(Long wishlistId) {
+    public void removeFromWishlist(Long wishlistId, Long userId) throws Exception {
+        Wishlist wishlist = wishlistRepository.findById(wishlistId)
+                .orElseThrow(() -> new Exception("Wishlist item not found"));
+        
+        if (!wishlist.getUser().getId().equals(userId)) {
+            throw new Exception("You are not authorized to remove this item");
+        }
+        
         wishlistRepository.deleteById(wishlistId);
     }
 }

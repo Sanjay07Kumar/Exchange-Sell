@@ -3,7 +3,8 @@ import UserPic from "../assets/placeholder.jpg";
 import Footer from "./Footer";
 import { FaBox, FaFolder, FaPowerOff, FaUser, FaHeart } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
-import { getAuthToken, isTokenExpired } from "../utils/tokenUtils";
+import { clearAuthData, getAuthToken, isTokenExpired } from "../utils/tokenUtils";
+import { Plus, ArrowRight, Package, ShoppingBag } from "lucide-react";
 
 export default function Profile() {
   const [email, setEmail] = useState("");
@@ -27,37 +28,31 @@ export default function Profile() {
   const [itemsLoading, setItemsLoading] = useState(false);
   const [itemsError, setItemsError] = useState("");
 
-  // Wishlist
   const [wishlist, setWishlist] = useState([]);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [wishlistError, setWishlistError] = useState("");
 
+  const [soldItems, setSoldItems] = useState([]);
+  const [soldItemsLoading, setSoldItemsLoading] = useState(false);
+  const [soldItemsError, setSoldItemsError] = useState("");
+
   const UserId = localStorage.getItem("UserId");
-  const isLoggedIn = !!localStorage.getItem("Token") && !isTokenExpired();
+  const isLoggedIn = !!getAuthToken() && !isTokenExpired();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (!isLoggedIn) navigate("/login");
   }, [isLoggedIn, navigate]);
 
-  // Fetch user profile
   useEffect(() => {
     const fetchUser = async () => {
       try {
         const token = getAuthToken();
-        if (!UserId?.trim()) {
-          setError("Missing UserId. Please login again.");
-          return;
-        }
+        if (!UserId?.trim() || !token) { setError("Missing or expired token. Please login again."); return; }
         const response = await fetch(`http://localhost:8080/user/profile/${UserId}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-
-        if (!response.ok) {
-          setError("Failed to load profile");
-          return;
-        }
-
+        if (!response.ok) { setError("Failed to load profile"); return; }
         const data = await response.json();
         setEmail(data.email || "");
         setUsername(data.username || "");
@@ -69,87 +64,65 @@ export default function Profile() {
         setError("Error fetching profile");
       }
     };
-
     fetchUser();
   }, [UserId]);
 
-  // Fetch user's items
   useEffect(() => {
     if (activeTab !== "myitems") return;
-
     const fetchItems = async () => {
-      setItemsLoading(true);
-      setItemsError("");
+      setItemsLoading(true); setItemsError("");
       try {
-        const token = localStorage.getItem("Token");
-        const res = await fetch(`http://localhost:8080/items/my-items`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!res.ok) {
-          const txt = await res.text();
-          setItemsError(txt || "Failed to fetch items");
-          setUserItems([]);
-          return;
-        }
-
-        const data = await res.json();
-        setUserItems(data || []);
-      } catch (err) {
-        setItemsError("Error fetching items");
-        setUserItems([]);
-      } finally {
-        setItemsLoading(false);
-      }
+        const token = getAuthToken();
+        if (!token) { setItemsError("Authentication required"); setItemsLoading(false); return; }
+        const res = await fetch(`http://localhost:8080/items/my-items`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) { const txt = await res.text(); setItemsError(txt || "Failed to fetch items"); setUserItems([]); return; }
+        setUserItems(await res.json() || []);
+      } catch (err) { setItemsError("Error fetching items"); setUserItems([]); }
+      finally { setItemsLoading(false); }
     };
-
     fetchItems();
   }, [activeTab, UserId]);
 
-  // Fetch wishlist
   useEffect(() => {
     if (activeTab !== "wishlist") return;
-
     const fetchWishlist = async () => {
-      setWishlistLoading(true);
-      setWishlistError("");
+      setWishlistLoading(true); setWishlistError("");
       try {
         const token = getAuthToken();
-        if (!token) {
-          // nothing we can do, token expired or missing
-          setWishlistError("Authentication required");
-          setWishlist([]);
-          return;
-        }
-        const res = await fetch(`http://localhost:8080/wishlist/user/${UserId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
+        if (!token) { setWishlistError("Authentication required"); setWishlist([]); return; }
+        const res = await fetch(`http://localhost:8080/wishlist/user/${UserId}`, { headers: { Authorization: `Bearer ${token}` } });
         if (!res.ok) throw new Error("Failed to fetch wishlist");
-        const data = await res.json();
-        setWishlist(data);
-      } catch (err) {
-        setWishlistError(err.message);
-      } finally {
-        setWishlistLoading(false);
-      }
+        setWishlist(await res.json());
+      } catch (err) { setWishlistError(err.message); }
+      finally { setWishlistLoading(false); }
     };
-
     fetchWishlist();
+  }, [activeTab, UserId]);
+
+  useEffect(() => {
+    if (activeTab !== "solditems") return;
+    const fetchSoldItems = async () => {
+      setSoldItemsLoading(true); setSoldItemsError("");
+      try {
+        const token = getAuthToken();
+        if (!token) { setSoldItemsError("Authentication required"); setSoldItems([]); return; }
+        const res = await fetch(`http://localhost:8080/items/my-sold-items`, { headers: { Authorization: `Bearer ${token}` } });
+        if (!res.ok) { const txt = await res.text(); setSoldItemsError(txt || "Failed to fetch sold items"); setSoldItems([]); return; }
+        setSoldItems(await res.json() || []);
+      } catch (err) { setSoldItemsError("Error fetching sold items"); setSoldItems([]); }
+      finally { setSoldItemsLoading(false); }
+    };
+    fetchSoldItems();
   }, [activeTab, UserId]);
 
   const removeFromWishlist = async (wishlistId) => {
     try {
       const token = getAuthToken();
       if (!token) return;
-      const res = await fetch(`http://localhost:8080/wishlist/${wishlistId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`http://localhost:8080/wishlist/${wishlistId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) throw new Error("Failed to remove item");
       setWishlist((prev) => prev.filter((w) => w.id !== wishlistId));
-    } catch (err) {
-      console.error(err);
-    }
+    } catch (err) { console.error(err); }
   };
 
   const validate = () => {
@@ -159,86 +132,73 @@ export default function Profile() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError("");
-    setSuccess("");
-
+    e.preventDefault(); setError(""); setSuccess("");
     const v = validate();
-    if (v) {
-      setError(v);
-      return;
-    }
-
+    if (v) { setError(v); return; }
     setLoading(true);
     try {
-      const token = localStorage.getItem("Token");
+      const token = getAuthToken();
+      if (!token) { setError("Authentication required"); return; }
       const response = await fetch("http://localhost:8080/user/update", {
         method: "PUT",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ id: UserId, email, username, phone, city, state, profilePhotoUrl }),
       });
-
-      if (!response.ok) {
-        const msg = await response.text();
-        setError(msg || "Update failed");
-        return;
-      }
-
+      if (!response.ok) { const msg = await response.text(); setError(msg || "Update failed"); return; }
       setSuccess("Profile updated successfully!");
-    } catch (err) {
-      setError("Failed to update. Try again.");
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setError("Failed to update. Try again."); }
+    finally { setLoading(false); }
   };
 
   const handleDeleteAccount = async () => {
     if (!window.confirm("Are you sure? This action cannot be undone.")) return;
-
     try {
-      const token = localStorage.getItem("Token");
-      const response = await fetch(`http://localhost:8080/user/delete/${UserId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      const token = getAuthToken();
+      if (!token) { setError("Authentication required"); return; }
+      const response = await fetch(`http://localhost:8080/user/delete/${UserId}`, { method: "DELETE", headers: { Authorization: `Bearer ${token}` } });
       const message = await response.text();
-      if (!response.ok) {
-        setError(message || "Failed to delete account");
-        return;
-      }
-
+      if (!response.ok) { setError(message || "Failed to delete account"); return; }
       alert("Your account has been deleted.");
-      localStorage.removeItem("Token");
-      localStorage.removeItem("UserId");
+      clearAuthData();
       navigate("/signup");
-    } catch (err) {
-      setError("Error deleting account. Try again.");
-    }
+    } catch (err) { setError("Error deleting account. Try again."); }
   };
 
-  const renderMyItems = () => {
-    if (itemsLoading) return <p>Loading items...</p>;
-    if (itemsError) return <p className="text-red-500">{itemsError}</p>;
-    if (!userItems || userItems.length === 0) return <p className="text-gray-600">You have not posted any items.</p>;
+  // ── Spinner helper ──
+  const Spinner = () => (
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <div className="w-9 h-9 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+      <p className="text-xs font-bold tracking-widest uppercase text-gray-400">Loading...</p>
+    </div>
+  );
 
+  // ── Empty helper ──
+  const Empty = ({ icon: Icon, message }) => (
+    <div className="flex flex-col items-center justify-center py-16 gap-3">
+      <div className="w-14 h-14 bg-orange-50 border border-orange-100 rounded-2xl flex items-center justify-center">
+        <Icon size={24} className="text-orange-400" />
+      </div>
+      <p className="text-sm text-gray-500 font-medium">{message}</p>
+    </div>
+  );
+
+  const renderMyItems = () => {
+    if (itemsLoading) return <Spinner />;
+    if (itemsError) return <p className="text-sm text-red-500 font-medium">{itemsError}</p>;
+    if (!userItems || userItems.length === 0) return <Empty icon={Package} message="You haven't posted any items yet." />;
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {userItems.map((it) => (
-          <div
-            key={it.id}
-            onClick={() => navigate(`/items/${it.id}`)}
-            className="border cursor-pointer rounded p-3 bg-white shadow-sm"
-          >
-            <img
-              src={it.imageUrls && it.imageUrls[0] ? `http://localhost:8080${it.imageUrls[0]}` : UserPic}
-              alt={it.name}
-              className="w-full h-36 object-cover rounded"
-            />
-            <h3 className="font-semibold mt-2">{it.name}</h3>
-            <p className="text-sm text-gray-600 mt-2">{it.description}</p>
-            <div className="flex items-center justify-between mt-2">
-              <span className="font-bold">₹{it.price}</span>
+          <div key={it.id} onClick={() => navigate(`/items/${it.id}`)}
+            className="bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden cursor-pointer hover:border-orange-400 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group">
+            <div className="aspect-video bg-white overflow-hidden">
+              <img src={it.imageUrls && it.imageUrls[0] ? it.imageUrls[0] : UserPic} alt={it.name}
+                className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300" />
+            </div>
+            <div className="px-3 py-3">
+              <p className="text-sm font-bold text-gray-900 truncate">{it.name}</p>
+              <p className="text-xs text-gray-400 mt-0.5 truncate">{it.description}</p>
+              <p className="text-sm font-black text-orange-500 mt-2">₹{it.price}</p>
             </div>
           </div>
         ))}
@@ -247,32 +207,27 @@ export default function Profile() {
   };
 
   const renderWishlist = () => {
-    if (wishlistLoading) return <p>Loading wishlist...</p>;
-    if (wishlistError) return <p className="text-red-500">{wishlistError}</p>;
-    if (!wishlist || wishlist.length === 0) return <p className="text-gray-600">Your wishlist is empty.</p>;
-
+    if (wishlistLoading) return <Spinner />;
+    if (wishlistError) return <p className="text-sm text-red-500 font-medium">{wishlistError}</p>;
+    if (!wishlist || wishlist.length === 0) return <Empty icon={FaHeart} message="Your wishlist is empty." />;
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {wishlist.map((w) => (
-          <div
-            key={w.id}
-            className="border rounded p-3 bg-white shadow-sm relative"
-          >
-            {/* heart icon in top right to remove */}
-            <FaHeart
-              onClick={() => removeFromWishlist(w.id)}
-              className="absolute top-2 right-2 text-red-600 cursor-pointer hover:text-red-700"
-              size={20}
-            />
+          <div key={w.id} className="bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden hover:border-orange-400 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group relative">
+            <button onClick={() => removeFromWishlist(w.id)}
+              className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center bg-white border border-gray-200 rounded-full hover:bg-red-50 hover:border-red-300 transition-all duration-200">
+              <FaHeart className="text-red-500 text-xs" />
+            </button>
             <div onClick={() => navigate(`/items/${w.item.id}`)} className="cursor-pointer">
-              <img
-                src={w.item.imageUrls && w.item.imageUrls[0] ? `http://localhost:8080${w.item.imageUrls[0]}` : UserPic}
-                alt={w.item.name}
-                className="w-full h-36 object-contain rounded mb-2"
-              />
-              <h3 className="font-semibold">{w.item.name}</h3>
-              <p className="text-sm text-gray-600 mt-1">{w.item.description}</p>
-              <span className="font-bold text-green-700 mt-1">₹{w.item.price}</span>
+              <div className="aspect-video bg-white overflow-hidden">
+                <img src={w.item.imageUrls && w.item.imageUrls[0] ? w.item.imageUrls[0] : UserPic} alt={w.item.name}
+                  className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300" />
+              </div>
+              <div className="px-3 py-3">
+                <p className="text-sm font-bold text-gray-900 truncate">{w.item.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5 truncate">{w.item.description}</p>
+                <p className="text-sm font-black text-orange-500 mt-2">₹{w.item.price}</p>
+              </div>
             </div>
           </div>
         ))}
@@ -280,174 +235,250 @@ export default function Profile() {
     );
   };
 
+  const renderSoldItems = () => {
+    if (soldItemsLoading) return <Spinner />;
+    if (soldItemsError) return <p className="text-sm text-red-500 font-medium">{soldItemsError}</p>;
+    if (!soldItems || soldItems.length === 0) return <Empty icon={ShoppingBag} message="You have no sold items yet." />;
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {soldItems.map((it) => (
+          <div key={it.id} onClick={() => navigate(`/items/${it.id}`)}
+            className="bg-gray-50 border border-gray-200 rounded-2xl overflow-hidden cursor-pointer hover:border-orange-400 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 group relative">
+            <span className="absolute top-3 left-3 z-10 bg-gray-900 text-white text-[10px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full">
+              Sold Out
+            </span>
+            <div className="aspect-video bg-white overflow-hidden">
+              <img src={it.imageUrls && it.imageUrls[0] ? it.imageUrls[0] : UserPic} alt={it.name}
+                className="w-full h-full object-contain p-2 opacity-70 group-hover:scale-105 transition-transform duration-300" />
+            </div>
+            <div className="px-3 py-3">
+              <p className="text-sm font-bold text-gray-900 truncate">{it.name}</p>
+              <p className="text-xs text-gray-400 mt-0.5 truncate">{it.description}</p>
+              <p className="text-sm font-black text-orange-500 mt-2">₹{it.price}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const tabs = [
+    { key: "account", label: "Account Info", icon: FaUser },
+    { key: "wishlist", label: "Wishlist", icon: FaHeart },
+    { key: "myitems", label: "My Items", icon: FaBox },
+    { key: "solditems", label: "Sold Items", icon: FaFolder },
+  ];
+
+  const tabTitles = {
+    account: "Account Information",
+    wishlist: "My Wishlist",
+    myitems: "My Items",
+    solditems: "Sold Items",
+  };
+
   return (
-    <div>
-      <div className="max-w-7xl mx-auto mt-20 flex gap-6 p-6">
-        {/* LEFT SIDEBAR */}
-        <div className="flex flex-col gap-4">
-          <div className="w-80 flex gap-5 bg-white border shadow-sm p-3 rounded-md">
-            <img
-              src={profilePhotoUrl || UserPic}
-              className="w-14 h-14 rounded-full object-cover"
-              alt="Profile"
-            />
-            <div>
-              <p className="text-sm text-gray-500">Hello,</p>
-              <p className="text-xl font-semibold">{username || "User"}</p>
+    <div className="w-full bg-gray-50 min-h-screen mt-[64px]">
+      <div className="max-w-6xl mx-auto px-6 py-8 flex flex-col lg:flex-row gap-6 items-start">
+
+        {/* ── LEFT SIDEBAR ── */}
+        <div className="w-full lg:w-64 flex-shrink-0 flex flex-col gap-4">
+
+          {/* Profile Card */}
+          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="bg-white px-5 py-5 flex items-center gap-4 border-b border-gray-100">
+              <img src={profilePhotoUrl || UserPic} className="w-14 h-14 rounded-full object-cover border-2 border-white shadow" alt="Profile" />
+              <div>
+                <p className="text-gray-400 text-xs font-medium">Hello,</p>
+                <p className="text-gray-900 text-base font-semibold truncate max-w-[130px]">{username || "User"}</p>
+              </div>
             </div>
           </div>
 
-          <div className="w-80 bg-white border shadow-sm p-3 rounded-md">
-            <div
-              className={`mb-2 flex gap-2 items-center cursor-pointer p-2 rounded-md ${
-                activeTab === "account" ? "bg-gray-100 text-orange-400" : "hover:bg-gray-50"
-              }`}
-              onClick={() => setActiveTab("account")}
-            >
-              <FaUser className="text-orange-400 text-lg" />
-              <span className="font-bold">ACCOUNT INFORMATION</span>
+          {/* Nav Card */}
+          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+            <div className="bg-white px-5 py-3.5 border-b border-gray-100">
+              <p className="text-xs font-semibold text-orange-500">Profile</p>
             </div>
+            <div className="p-2 flex flex-col gap-1">
+              {tabs.map(({ key, label, icon: Icon }) => (
+                <button key={key} onClick={() => setActiveTab(key)}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 text-left ${
+                    activeTab === key
+                      ? "bg-orange-50 text-orange-500 border border-orange-200"
+                      : "text-gray-600 hover:bg-gray-50 hover:text-orange-500"
+                  }`}>
+                  <Icon size={14} className={activeTab === key ? "text-orange-500" : "text-gray-400"} />
+                  {label}
+                  {activeTab === key && <ArrowRight size={13} className="ml-auto text-orange-400" />}
+                </button>
+              ))}
 
-            <div className="flex items-start gap-3 p-2">
-              <FaFolder className="text-orange-400 text-lg mt-1" />
-              <div className="flex flex-col gap-2">
-                <span className="font-bold ">MY STUFF</span>
-                <span
-                  className={`text-sm text-gray-700 hover:bg-gray-100 cursor-pointer p-1 rounded ${
-                    activeTab === "wishlist" ? "bg-gray-100" : ""
-                  }`}
-                  onClick={() => setActiveTab("wishlist")}
-                >
-                  Wishlist
-                </span>
-                <span
-                  className={`text-sm text-gray-700 hover:bg-gray-100 cursor-pointer p-1 rounded ${
-                    activeTab === "myitems" ? "bg-gray-100" : ""
-                  }`}
-                  onClick={() => setActiveTab("myitems")}
-                >
-                  My Items
-                </span>
-              </div>
-            </div>
+              <div className="h-px bg-gray-100 my-1" />
 
-            <div className="flex gap-2 items-center cursor-pointer hover:bg-gray-50 p-2 rounded-md">
-              <FaPowerOff className="text-orange-400 text-lg" />
               <button
-                className="font-bold text-left"
-                onClick={() => {
-                  localStorage.removeItem("Token");
-                  navigate("/login");
-                }}
+                onClick={() => { localStorage.removeItem("Token"); navigate("/login"); }}
+                className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-red-500 hover:bg-red-50 transition-all duration-200"
               >
+                <FaPowerOff size={13} />
                 Logout
               </button>
             </div>
           </div>
         </div>
 
-        {/* RIGHT CONTENT */}
-        <div className="flex-1 bg-white border shadow-sm p-8 rounded-md min-h-[400px]">
-          {activeTab === "account" && (
-            <>
-              <h2 className="text-2xl font-semibold mb-4">Account Information</h2>
-              {error && <p className="text-red-500 mb-4">{error}</p>}
-              {success && <p className="text-green-500 mb-4">{success}</p>}
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Email</label>
-                  <input
-                    type="email"
-                    value={email}
-                    disabled
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm bg-gray-100"
-                  />
-                </div>
+        {/* ── RIGHT CONTENT ── */}
+        <div className="flex-1 bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm min-h-[500px]">
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Username</label>
-                  <input
-                    type="text"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    required
-                  />
-                </div>
+          {/* Panel Header */}
+          <div className="bg-white px-6 py-4 flex items-center justify-between border-b border-gray-100">
+            <span className="text-sm font-semibold text-gray-800">
+              {tabTitles[activeTab]}
+            </span>
+            {activeTab === "myitems" && (
+              <button onClick={() => navigate("/additem")}
+                className="flex items-center gap-1.5 px-4 py-1.5 bg-white text-orange-500 hover:bg-orange-50 rounded-xl text-xs font-bold tracking-wide transition-all duration-200">
+                <Plus size={13} />
+                Add Item
+              </button>
+            )}
+          </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Phone</label>
-                  <input
-                    type="text"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                    required
-                  />
-                </div>
+          <div className="p-6">
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">City</label>
-                  <input
-                    type="text"
-                    value={city}
-                    onChange={(e) => setCity(e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                </div>
+            {/* ── Account Tab ── */}
+            {activeTab === "account" && (
+              <div>
+                
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">State</label>
-                  <input
-                    type="text"
-                    value={state}
-                    onChange={(e) => setState(e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                </div>
+                {/* Alerts */}
+                {error && (
+                  <div className="mb-5 px-4 py-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-500 font-medium flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-red-500 rounded-full flex-shrink-0" />
+                    {error}
+                  </div>
+                )}
+                {success && (
+                  <div className="mb-5 px-4 py-3 bg-green-50 border border-green-200 rounded-xl text-sm text-green-600 font-medium flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-green-500 rounded-full flex-shrink-0" />
+                    {success}
+                  </div>
+                )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Profile Photo URL</label>
-                  <input
-                    type="text"
-                    value={profilePhotoUrl}
-                    onChange={(e) => setProfilePhotoUrl(e.target.value)}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-                  />
-                </div>
+                <form onSubmit={handleSubmit}>
+                  {/* Section: Basic Info */}
+                  <div className="mb-2">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-1 h-4 bg-orange-500 rounded-full" />
+                      <p className="text-sm font-semibold text-gray-700">Basic Information</p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Email — disabled */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-medium text-gray-400 uppercase tracking-wide">Email</label>
+                        <div className="relative">
+                          <input
+                            type="email"
+                            value={email}
+                            disabled
+                            className="w-full bg-gray-100 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-400 cursor-not-allowed outline-none"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-gray-400 bg-gray-200 px-2 py-0.5 rounded-full">Locked</span>
+                        </div>
+                      </div>
 
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-                >
-                  {loading ? "Updating..." : "Update Profile"}
-                </button>
-              </form>
-            </>
-          )}
+                      {/* Username */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Username</label>
+                        <input
+                          type="text"
+                          value={username}
+                          onChange={(e) => setUsername(e.target.value)}
+                          placeholder="Your username"
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-300 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all"
+                        />
+                      </div>
 
-          {activeTab === "myitems" && (
-            <>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-2xl font-semibold">My Items</h2>
-                <button
-                  className="bg-green-600 text-white px-3 py-1 rounded"
-                  onClick={() => navigate("/additem")}
-                >
-                  Add New Item
-                </button>
+                      {/* Phone */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Phone</label>
+                        <input
+                          type="text"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          placeholder="Your phone number"
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-300 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all"
+                        />
+                      </div>
+
+                      {/* Profile Photo URL */}
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">Profile Photo URL</label>
+                        <input
+                          type="text"
+                          value={profilePhotoUrl}
+                          onChange={(e) => setProfilePhotoUrl(e.target.value)}
+                          placeholder="https://..."
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-300 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="h-px bg-gray-100 my-5" />
+
+                  {/* Section: Location */}
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-1 h-4 bg-orange-500 rounded-full" />
+                      <p className="text-sm font-semibold text-gray-700">Location</p>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">City</label>
+                        <input
+                          type="text"
+                          value={city}
+                          onChange={(e) => setCity(e.target.value)}
+                          placeholder="Your city"
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-300 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <label className="text-xs font-medium text-gray-500 uppercase tracking-wide">State</label>
+                        <input
+                          type="text"
+                          value={state}
+                          onChange={(e) => setState(e.target.value)}
+                          placeholder="Your state"
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-800 placeholder-gray-300 outline-none focus:border-orange-500 focus:bg-white focus:ring-2 focus:ring-orange-100 transition-all"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Submit */}
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-fit px-10 mx-auto py-3.5 bg-orange-500 hover:bg-orange-600 text-white font-semibold text-sm rounded-xl transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 group shadow-md shadow-orange-100"
+                  >
+                    {loading ? "Saving changes..." : "Save Changes"}
+                    {!loading && <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform duration-200" />}
+                  </button>
+                </form>
               </div>
-              {renderMyItems()}
-            </>
-          )}
+            )}
 
-          {activeTab === "wishlist" && (
-            <>
-              <h2 className="text-2xl font-semibold mb-4">My Wishlist</h2>
-              {renderWishlist()}
-            </>
-          )}
+            {/* ── My Items Tab ── */}
+            {activeTab === "myitems" && renderMyItems()}
+
+            {/* ── Wishlist Tab ── */}
+            {activeTab === "wishlist" && renderWishlist()}
+
+            {/* ── Sold Items Tab ── */}
+            {activeTab === "solditems" && renderSoldItems()}
+          </div>
         </div>
       </div>
 
