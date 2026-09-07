@@ -22,8 +22,7 @@ public class JwtAuthFilter implements Filter {
             throws IOException, ServletException {
 
         HttpServletRequest request = (HttpServletRequest) req;
-
-        // Extract JWT token if present
+        
         String authHeader = request.getHeader("Authorization");
         String token = null;
         String username = null;
@@ -37,7 +36,6 @@ public class JwtAuthFilter implements Filter {
             }
         }
 
-        // If we have a valid username and no existing authentication, set it
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             try {
                 var userDetails = userDetailsService.loadUserByUsername(username);

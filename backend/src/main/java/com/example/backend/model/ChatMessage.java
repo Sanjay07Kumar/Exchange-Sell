@@ -22,5 +22,5 @@ public class ChatMessage {
     private String text;
     private String imageUrl;
     private long timestamp;
-    private String type; // "message", "image", or "system"
+    private String type;
 }

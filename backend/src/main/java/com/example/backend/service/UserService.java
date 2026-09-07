@@ -99,7 +99,6 @@ public class UserService {
             userUpdate.setState(user.getState());
         }
 
-        // Update password if sent
         if (user.getPassword() != null && !user.getPassword().isEmpty()) {
             userUpdate.setPassword(passwordEncoder.encode(user.getPassword()));
         }
@@ -114,13 +113,11 @@ public class UserService {
 
     public String deleteUser(Long id, String token) {
 
-    // 1. Check if user exists
     Optional<User> optionalUser = userRepo.findById(id);
     if (optionalUser.isEmpty()) {
         return "Error: User not found.";
     }
 
-    // 2. Extract logged-in email from JWT
     String email;
     try {
         email = jwtUtil.extractUsername(token);
@@ -133,12 +130,10 @@ public class UserService {
         return "Error: Unauthorized. User not found from token.";
     }
 
-    // 3. Prevent deleting other users
     if (!loggedIn.getId().equals(id)) {
         return "Error: You are NOT allowed to delete another user's account.";
     }
 
-    // 4. Delete the user
     try {
         userRepo.deleteById(id);
         return "Success: User Deleted Successfully";

@@ -100,7 +100,6 @@ function AddItem() {
   return (
     <div className="w-full min-h-screen bg-gray-50 mt-[70px]">
 
-      {/* ── Header ── */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-6 py-8 flex items-end justify-between">
           <div>
@@ -117,13 +116,10 @@ function AddItem() {
         </div>
       </div>
 
-      {/* ── Body ── */}
       <div className="max-w-6xl mx-auto px-6 py-10 flex flex-col lg:flex-row gap-8 items-start">
 
-        {/* ── LEFT: Image Upload Panel ── */}
         <div className="w-full lg:w-[400px] bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm flex-shrink-0">
 
-          {/* Panel Header */}
           <div className="bg-gray-900 px-5 py-4 flex items-center gap-3">
             <ImagePlus size={16} className="text-orange-400" />
             <span className="text-xs font-bold tracking-[3px] uppercase text-white">
@@ -131,7 +127,6 @@ function AddItem() {
             </span>
           </div>
 
-          {/* Image Grid */}
           <div className="grid grid-cols-3 gap-3 p-5">
             {images.map((img, index) => (
               <div
@@ -164,7 +159,6 @@ function AddItem() {
             ))}
           </div>
 
-          {/* Add More Button */}
           <div className="px-5 pb-5">
             <button
               onClick={handleAddMoreBox}
@@ -176,10 +170,8 @@ function AddItem() {
           </div>
         </div>
 
-        {/* ── RIGHT: Form Panel ── */}
         <div className="flex-1 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
 
-          {/* Panel Header */}
           <div className="bg-orange-500 px-6 py-4 flex items-center gap-3">
             <Sparkles size={16} className="text-white" />
             <span className="text-xs font-bold tracking-[3px] uppercase text-white">
@@ -189,7 +181,6 @@ function AddItem() {
 
           <form onSubmit={submitForm} className="p-6 space-y-6">
 
-            {/* Row: Name + Category */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               <div className="flex flex-col gap-2">
                 <label className="flex items-center gap-2 text-[11px] font-bold tracking-[2px] uppercase text-gray-800">
@@ -225,7 +216,6 @@ function AddItem() {
 
             <div className="h-px bg-gray-100" />
 
-            {/* Row: Price + Item Age + Condition */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div className="flex flex-col gap-2">
                 <label className="flex items-center gap-1.5 text-[11px] font-bold tracking-[2px] uppercase text-gray-800">
@@ -275,7 +265,6 @@ function AddItem() {
 
             <div className="h-px bg-gray-100" />
 
-            {/* Description */}
             <div className="flex flex-col gap-2">
               <label className="flex items-center gap-2 text-[11px] font-bold tracking-[2px] uppercase text-gray-800">
                 <AlignLeft size={12} className="text-orange-500" />
@@ -292,10 +281,8 @@ function AddItem() {
 
             <div className="h-px bg-gray-100" />
 
-            {/* Toggle Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
-              {/* Negotiable Toggle */}
               <label
                 className={`flex items-center justify-between px-5 py-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
                   form.isNegotiable
@@ -319,7 +306,6 @@ function AddItem() {
                 </div>
               </label>
 
-              {/* Exchange Toggle */}
               <label
                 className={`flex items-center justify-between px-5 py-4 rounded-xl border-2 cursor-pointer transition-all duration-200 ${
                   form.forExchange
@@ -344,7 +330,6 @@ function AddItem() {
               </label>
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               className="w-full bg-gray-900 hover:bg-orange-500 text-white font-bold py-4 rounded-xl text-sm tracking-widest uppercase transition-all duration-300 flex items-center justify-center gap-2 group shadow-md mt-2"

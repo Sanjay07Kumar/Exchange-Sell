@@ -14,19 +14,14 @@ public class CorsConfig {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
                 registry.addMapping("/**")
-                    // Allow all localhost ports for development
                     .allowedOriginPatterns("http://localhost:*")
-                    // 2. Allows all necessary HTTP methods (including OPTIONS for pre-flight).
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
-                    // 3. Allows all request headers, which is critical for sending the JWT in the 'Authorization' header.
                     .allowedHeaders("*") 
-                    // 4. Allows the use of credentials (like Authorization headers, cookies).
                     .allowCredentials(true); 
             }
 
             @Override
             public void addResourceHandlers(org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry registry) {
-                // Serve uploaded files from filesystem uploads/ directory at /uploads/**
                 registry.addResourceHandler("/uploads/**")
                         .addResourceLocations("file:uploads/");
             }
